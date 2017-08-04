@@ -143,5 +143,9 @@ main(int argc, char **argv)
         char *result = db_search(&db, line);
         printf("%s: %s\n", line, result ? "found" : "not found");
     }
+#ifndef __CYGWIN__
     db_close(&db);
+#else
+    (void)db_close;
+#endif
 }
