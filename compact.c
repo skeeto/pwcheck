@@ -11,7 +11,7 @@ static const unsigned char lookup[] = {
 int
 main(void)
 {
-    char in[43];
+    char in[43] = {0};
     while (fgets(in, sizeof(in), stdin)) {
         unsigned char out[20];
         for (int i = 0; i < (int)sizeof(out); i++) {
@@ -21,7 +21,11 @@ main(void)
         }
         if (!fwrite(out, sizeof(out), 1, stdout)) {
             perror(in);
-            exit(EXIT_FAILURE);
+            return EXIT_FAILURE;
         }
+    }
+    if (ferror(stdin)) {
+        perror(in);
+        return EXIT_FAILURE;
     }
 }
