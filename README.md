@@ -26,7 +26,7 @@ To build, run `make`. It produces:
 To build a database from the "ordered by hash" dataset, pipe it through
 the `compact` command:
 
-    $ ./compact <pwned-passwords-ordered-2.0.txt.xz >pwned.db
+    $ ./compact <pwned-passwords-ordered-2.0.txt >pwned.db
 
 Hash truncation is controlled at *compile time* in `config.h`. With the
 default configuration, the 2.0 dataset (501m passwords) becomes a 3.8GB
