@@ -1,5 +1,6 @@
-CC     = c99
-CFLAGS = -Wall -Wextra -O3
+.POSIX:
+CC     = cc
+CFLAGS = -std=c99 -Wall -Wextra -O3
 
 all: pwcheck libpwcheck.so compact
 
