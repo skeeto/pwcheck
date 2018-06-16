@@ -11,8 +11,6 @@
 #include "config.h"
 #include "pwcheck.h"
 
-#define DIE(s) do { perror(s); exit(EXIT_FAILURE); } while (0)
-
 struct pwcheck {
     void *data;
     size_t count;
@@ -140,8 +138,10 @@ main(int argc, char **argv)
     }
 
     struct pwcheck db;
-    if (!db_open(&db, dbfile))
-        DIE(dbfile);
+    if (!db_open(&db, dbfile)) {
+        perror(dbfile);
+        exit(EXIT_FAILURE);
+    }
 
     /* Look up each word from standard input */
     char line[256];
