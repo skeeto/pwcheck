@@ -29,7 +29,7 @@ PWCHECK_API
 int pwcheck_password(const struct pwcheck *, const char *);
 
 /**
- * Return 0 if the given SHA1 hash is not in the database.
+ * Return 0 if the given SHA-1 hash is not in the database.
  */
 PWCHECK_API
 int pwcheck_hash(const struct pwcheck *, const void *);
