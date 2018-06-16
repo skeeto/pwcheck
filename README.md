@@ -34,6 +34,15 @@ database. Since the database is memory mapped, it is not essential to
 have that much physical memory, but it *is* essential for maintaining a
 high throughput.
 
+The `pwcheck` convenient utility can query a database without involving
+the library. It reads passwords, one per line, on standard input:
+
+    $ echo correcthorsebatterystaple | ./pwcheck pwned.db
+    correcthorsebatterystaple: found
+
+    $ echo LyX | ./pwcheck pwned.db
+    LyX: not found
+
 ## Shared library API
 
 The API for `libpwcheck.so` is very FFI-friendly:
