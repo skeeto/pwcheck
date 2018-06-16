@@ -9,34 +9,36 @@
 
 #include "sha1.h"
 #include "config.h"
+#include "pwcheck.h"
 
 #define DIE(s) do { perror(s); exit(EXIT_FAILURE); } while (0)
 
-struct db {
+struct pwcheck {
     void *data;
     size_t count;
 };
 
-static void
-db_open(struct db *db, const char *dbfile)
+static int
+db_open(struct pwcheck *db, const char *dbfile)
 {
     int fd = open(dbfile, O_RDONLY);
     if (fd == -1)
-        DIE(dbfile);
+        return 0;
 
     struct stat stat[1];
-    if (fstat(fd, stat) == -1)
-        DIE(dbfile);
+    if (fstat(fd, stat) == -1) {
+        close(fd);
+        return 0;
+    }
     db->count = stat->st_size / HASH_LENGTH;
 
     db->data = mmap(0, stat->st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-    if (db->data == MAP_FAILED)
-        DIE(dbfile);
     close(fd);
+    return db->data != MAP_FAILED;
 }
 
 static void
-db_close(struct db *db)
+db_close(struct pwcheck *db)
 {
     munmap(db->data, db->count * HASH_LENGTH);
 }
@@ -48,16 +50,65 @@ bincmp(const void *a, const void *b)
 }
 
 static char *
-db_search(struct db *db, char *password)
+db_search(const struct pwcheck *db, const void *hash)
 {
-    unsigned char buf[SHA1_DIGEST_SIZE];
+    return bsearch(hash, db->data, db->count, HASH_LENGTH, bincmp);
+}
 
+static void
+password_hash(unsigned char buf[SHA1_DIGEST_SIZE], const char *password)
+{
     SHA1_CTX ctx[1];
     SHA1_Init(ctx);
     SHA1_Update(ctx, (void *)password, strlen(password));
     SHA1_Final(ctx, buf);
-    return bsearch(buf, db->data, db->count, HASH_LENGTH, bincmp);
 }
+
+#ifndef CMDLINE
+
+/* Shared library interface */
+
+PWCHECK_API
+struct pwcheck *
+pwcheck_open(const char *filename)
+{
+    struct pwcheck *db = malloc(sizeof(*db));
+    if (!db)
+        return 0;
+    if (!db_open(db, filename)) {
+        free(db);
+        return 0;
+    }
+    return db;
+}
+
+PWCHECK_API
+void
+pwcheck_close(struct pwcheck *db)
+{
+    db_close(db);
+    free(db);
+}
+
+PWCHECK_API
+int
+pwcheck_password(const struct pwcheck *db, const char *password)
+{
+    unsigned char buf[SHA1_DIGEST_SIZE];
+    password_hash(buf, password);
+    return !!db_search(db, buf);
+}
+
+PWCHECK_API
+int
+pwcheck_hash(const struct pwcheck *db, const void *hash)
+{
+    return !!db_search(db, hash);
+}
+
+#else
+
+/* Command line interface */
 
 static void
 usage(FILE *f)
@@ -88,20 +139,27 @@ main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
+    struct pwcheck db;
+    if (!db_open(&db, dbfile))
+        DIE(dbfile);
+
     /* Look up each word from standard input */
-    struct db db;
-    db_open(&db, dbfile);
     char line[256];
+    unsigned char buf[SHA1_DIGEST_SIZE];
     while (fgets(line, sizeof(line), stdin)) {
         size_t last = strlen(line) - 1;
         if (line[last] == '\n')
             line[last] = 0;
-        char *result = db_search(&db, line);
+        password_hash(buf, line);
+        char *result = db_search(&db, buf);
         printf("%s: %s\n", line, result ? "found" : "not found");
     }
-#ifndef __CYGWIN__
+
+#ifdef __CYGWIN__
     db_close(&db);
 #else
-    (void)db_close;
-#endif
+    (void)db_close; // munmap() is ridiculously slow on Cygwin
+#endif /* __CYGWIN__ */
 }
+
+#endif /* CMDLINE */

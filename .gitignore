@@ -1,4 +1,3 @@
 pwcheck
 compact
-pwned-passwords-1.0.txt
-pwned-passwords-1.0.bin
+libpwcheck.so
